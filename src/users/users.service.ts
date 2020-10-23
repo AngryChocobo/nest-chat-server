@@ -38,7 +38,7 @@ export class UsersService {
         id: existUser.id,
       });
       return {
-        id: existUser.id,
+        loggedInUser: existUser,
         token,
       };
     } else {
