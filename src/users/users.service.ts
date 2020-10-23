@@ -3,9 +3,10 @@ import { InjectModel } from '@nestjs/sequelize';
 import { Sequelize } from 'sequelize-typescript';
 import * as NodeRSA from 'node-rsa';
 import * as bcrypt from 'bcrypt';
-import { CreateUserDto } from './dto/create-user.dto';
+import { LoginUserDto } from './dto/login-user.dto';
 import { RegisterUserDto } from './dto/register-user.dto';
 import { User } from './user.model';
+import { generateToken } from '../utils';
 
 @Injectable()
 export class UsersService {
@@ -15,12 +16,34 @@ export class UsersService {
     private readonly sequelize: Sequelize,
   ) {}
 
-  create(createUserDto: CreateUserDto): Promise<User> {
-    const user = new User();
-    user.username = createUserDto.username;
-    user.password = createUserDto.password;
-
-    return user.save();
+  async login(loginUserDto: LoginUserDto): Promise<any> {
+    const existUser = await User.findOne({
+      where: {
+        username: loginUserDto.username,
+      },
+    });
+    if (!existUser) {
+      throw new HttpException('该用户名未注册', HttpStatus.FORBIDDEN);
+    }
+    const RSAPrivateKey = process.env.RSA_PRIVATE_KEY;
+    const key = new NodeRSA(RSAPrivateKey);
+    key.setOptions({ encryptionScheme: 'pkcs1' }); // jsencrypt使用pkcs1
+    const decryptedPassword = key.decrypt(loginUserDto.password, 'utf8');
+    const isPasswordValid = bcrypt.compareSync(
+      decryptedPassword,
+      existUser.password,
+    );
+    if (isPasswordValid) {
+      const token: string = generateToken({
+        id: existUser.id,
+      });
+      return {
+        id: existUser.id,
+        token,
+      };
+    } else {
+      throw new HttpException('密码错误', HttpStatus.FORBIDDEN);
+    }
   }
 
   async register(registerUserDto: RegisterUserDto): Promise<User> {

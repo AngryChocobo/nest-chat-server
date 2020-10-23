@@ -1,7 +1,7 @@
 import { Body, Controller, Delete, Get, Param, Post } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { RegisterUserDto } from './dto/register-user.dto';
-import { CreateUserDto } from './dto/create-user.dto';
+import { LoginUserDto } from './dto/login-user.dto';
 
 import { User } from './user.model';
 import { UsersService } from './users.service';
@@ -11,9 +11,10 @@ import { UsersService } from './users.service';
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
-  @Post()
-  create(@Body() createUserDto: CreateUserDto): Promise<User> {
-    return this.usersService.create(createUserDto);
+  @Post('login')
+  @ApiOperation({ summary: '用户登录' })
+  login(@Body() loginUserDto: LoginUserDto): Promise<any> {
+    return this.usersService.login(loginUserDto);
   }
 
   @Get()
