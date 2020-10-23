@@ -1,7 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { Sequelize } from 'sequelize-typescript';
+import * as NodeRSA from 'node-rsa';
+import * as bcrypt from 'bcrypt';
 import { CreateUserDto } from './dto/create-user.dto';
+import { RegisterUserDto } from './dto/register-user.dto';
 import { User } from './user.model';
 
 @Injectable()
@@ -14,10 +17,36 @@ export class UsersService {
 
   create(createUserDto: CreateUserDto): Promise<User> {
     const user = new User();
-    user.firstName = createUserDto.firstName;
-    user.lastName = createUserDto.lastName;
+    user.username = createUserDto.username;
+    user.password = createUserDto.password;
 
     return user.save();
+  }
+
+  async register(registerUserDto: RegisterUserDto): Promise<User> {
+    const RSAPrivateKey = process.env.RSA_PRIVATE_KEY;
+    const key = new NodeRSA(RSAPrivateKey);
+    key.setOptions({ encryptionScheme: 'pkcs1' }); // jsencrypt使用pkcs1
+
+    const { username, password } = registerUserDto;
+    const user = await User.findOne({
+      where: { username },
+    });
+    if (user) {
+      throw new HttpException('用户名已被注册', HttpStatus.FORBIDDEN);
+    } else {
+      // 用私钥对密码进行加密，之后进行加盐
+      const decryptedPassword = key.decrypt(password, 'utf8');
+      // Logger.log('RSA解密后:' + decryptedPassword);
+      const hashedPassword = bcrypt.hashSync(
+        decryptedPassword,
+        bcrypt.genSaltSync(10),
+      );
+      const user = new User();
+      user.username = username;
+      user.password = hashedPassword;
+      return user.save();
+    }
   }
 
   async findAll(): Promise<User[]> {
@@ -26,11 +55,7 @@ export class UsersService {
         const transactionHost = { transaction: t };
 
         await this.userModel.create(
-          { firstName: 'Abraham', lastName: 'Lincoln' },
-          transactionHost,
-        );
-        await this.userModel.create(
-          { firstName: 'John', lastName: 'Boothe' },
+          { username: 'Abraham', password: 'Lincoln' },
           transactionHost,
         );
       });
