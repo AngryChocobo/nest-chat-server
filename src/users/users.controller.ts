@@ -1,13 +1,22 @@
-import { Body, Controller, Delete, Get, Param, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { RegisterUserDto } from './dto/register-user.dto';
 import { LoginUserDto } from './dto/login-user.dto';
+import { TokenGuard } from '../guards/token.guard';
 
 import { User } from './user.model';
 import { UsersService } from './users.service';
 
-@ApiTags('users')
 @Controller('users')
+@ApiTags('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
@@ -23,8 +32,10 @@ export class UsersController {
   }
 
   @Get(':id')
+  @UseGuards(TokenGuard)
   findOne(@Param('id') id: string): Promise<User> {
-    return this.usersService.findOne(id);
+    // return this.usersService.findOne(id);
+    return this.usersService.getLoggedInUserInfo();
   }
 
   @Delete(':id')

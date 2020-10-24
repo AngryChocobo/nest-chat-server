@@ -1,4 +1,10 @@
-import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
+import {
+  HttpException,
+  HttpStatus,
+  Injectable,
+  Logger,
+  UseGuards,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { Sequelize } from 'sequelize-typescript';
 import * as NodeRSA from 'node-rsa';
@@ -97,6 +103,9 @@ export class UsersService {
     });
   }
 
+  getLoggedInUserInfo(): Promise<User> {
+    throw new HttpException('ee', HttpStatus.BAD_GATEWAY);
+  }
   async remove(id: string): Promise<void> {
     const user = await this.findOne(id);
     await user.destroy();
